@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>表格框选</title>
+  <style>
+    .grad-table{margin-top:10px;height:calc(90% - 60px);position:relative;user-select:none}
+    .grad-table .mask{position:absolute;background:#409eff;opacity:.4;z-index:10000000000000}
+    .grad-table table.gridtable{width:100%;height:100%;border:.1px solid #eee}
+    .grad-table table.gridtable td,.grad-table table.gridtable th{text-align:center}
+    .grad-table table.gridtable th{height:20px;background:#f8f8f9}
+    .grad-table table.gridtable .week-first-td{height:20px;background:#f8f8f9}
+    .grad-table table.gridtable .week-data-td{height:50px;line-height:50px;vertical-align:top;font-size:10px;position:relative;cursor:pointer}
+    .grad-table table.gridtable .week-data-td .td-data-p{position:absolute;width:200%;display:block;left:0;z-index:10;text-align:center}
+    .grad-table table.gridtable .week-data-td .td-data-content{bottom:0}
+    .grad-table table.gridtable .white-font{color:rgba(255,255,255,.8)}
+  </style>
+</head>
+
+<body>
+  <div class="grad-table" id="selectContainer" @mousedown="handleMouseDown">
+    <div style="margin-bottom: 10px;text-align: right;">
+      <!-- <div @click="reset" class="reset-btn">重置</div> -->
+      <el-button @click="reset">取消框选</el-button>
+      <el-button type="primary" @click="changeVal">确认更改</el-button>
+    </div>
+    <div class="loading-box" v-if="loading">
+      <span class="el-icon-loading"></span>
+    </div>
+    <table border="1" cellspacing="0" class="gridtable" align="center" v-else>
+      <tr>
+        <th>星期\时间</th>
+        <th width="4%" v-for="(item,index) in timeThArr" :key="index">{{item}}时</th>
+      </tr>
+      <tr v-for="(item,index) in tableData" :key="index">
+        <td class="week-first-td">{{index==6?'星期天':weekEnum[index+1]}}</td>
+        <td v-for="(temp,key) in item" :key="key" class="week-data-td" @click="handleClickTimeData(temp,index)"
+          :style="`background:${temp.checked?'#3af':''}`">
+          <p>{{temp.val||'-'}}</p>
+        </td>
+      </tr>
+
+    </table>
+    <div class="mask" v-show="is_show_mask"
+      :style="'width:'+mask_width()+'left:'+mask_left()+'height:'+mask_height()+'top:'+mask_top()">
+    </div>
+    <el-dialog title="输入数字" :visible.sync="dialogVisible" width="30%" :before-close="handleClose">
+      <el-input type="text" v-model="dialogVal"></el-input>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="confirm">确 定</el-button>
+      </span>
+    </el-dialog>
+  </div>
+</body>
+<script src="https://lib.baomitu.com/vue/2.6.10/vue.min.js"></script>
+<script src="https://lib.baomitu.com/underscore.js/1.11.0/underscore-min.js"></script>
+<script crossorigin="anonymous"
+  integrity="sha512-wHKjja2jlr94LwuFjnUefyL05sTREyFnf8qS2NI8vezYwzlVI7ABe+KSJZ1P/IMo7oKpj/dY9XcRa9lQP4qZaQ=="
+  src="https://lib.baomitu.com/element-ui/2.14.1/index.js"></script>
+<link crossorigin="anonymous"
+  integrity="sha512-VlhqjPbpqx8fc5LrtBpKJuYMuqrNzFq9oOPV5IVDEirfWaaR4avnmOnLOCGzO1NmVkmVlJ/Xzr+gf+XBd6WfXQ=="
+  href="https://lib.baomitu.com/element-ui/2.14.1/theme-chalk/index.css" rel="stylesheet">
+<script>
+  new Vue({
+    el: ".grad-table",
+    data() {
+      return {
+        weekArr: [1, 2, 3, 4, 5, 6, 0],
+        timeThArr: [],
+        timeTdArr: [],
+        dialogVisible: false,
+        dialogVal: 100,
+        weekEnum: [
+          '星期日',
+          '星期一',
+          '星期二',
+          '星期三',
+          '星期四',
+          '星期五',
+          '星期六'
+        ],
+        tableData: [[], [], [], [], [], [], []],
+        loading: false,
+        start_x: 0,
+        start_y: 0,
+        end_x: 0,
+        end_y: 0,
+        box_screen_left: 0,
+        box_screen_top: 0,
+        is_show_mask: false,
+      }
+    },
+    methods: {
+      setTableConfig() {
+        let timeThArr = Array.from(new Array(24).keys());
+        let timeTdArr = Array.from(new Array(48).keys());
+        timeTdArr = timeTdArr.map((item) => {
+          let obj = {
+            id: item,
+          };
+          return obj;
+        });
+        this.timeThArr = timeThArr;
+        this.timeTdArr = timeTdArr;
+
+        let tableList = this.tableData;
+        tableList.map((item, index) => {
+          this.timeThArr.map((temp, key) => {
+            item.push({
+              key: key + index * 24,
+            })
+          })
+        })
+        this.tableData = tableList;
+      },
+      handleClickTimeData(obj, index) {
+        let tableList = _.clone(this.tableData);
+        _.map(tableList[index], (item) => {
+          if (item.key == obj.key) {
+            item.checked = !item.checked;
+          }
+        });
+        this.tableData = tableList;
+      },   
+      reset() {
+        let tableList = _.clone(this.tableData);
+        _.map(tableList, (item) => {
+          _.map(item, temp => {
+            temp.checked = false;
+          })
+        });
+        this.tableData = tableList;
+      },
+      changeVal(){
+        this.dialogVisible = true;
+      },
+      confirm(){
+        let tableList = _.clone(this.tableData);
+        _.map(tableList, (item) => {
+          _.map(item, (temp) => {
+            if (temp.checked) {
+              temp.val = this.dialogVal;
+            }
+          });
+        });
+        this.tableData = tableList;
+        this.dialogVisible = false;
+        this.reset();
+      },
+      handleClose(){
+        this.dialogVisible = false;
+      },
+
+      // 框选操作
+      mask_width() {
+        return `${Math.abs(this.end_x - this.start_x)}px;`;
+      },
+
+      mask_height() {
+        return `${Math.abs(this.end_y - this.start_y)}px;`;
+      },
+
+      mask_left() {
+        return `${Math.min(this.start_x, this.end_x) - this.box_screen_left}px;`;
+      },
+
+      mask_top() {
+        return `${Math.min(this.start_y, this.end_y) - this.box_screen_top}px;`;
+      },
+
+      handleMouseDown(e) {
+        this.is_show_mask = true;
+        this.start_x = e.clientX;
+        this.start_y = e.clientY;
+        this.end_x = e.clientX;
+        this.end_y = e.clientY;
+        document.body.addEventListener("mousemove", this.handleMouseMove);
+        document.body.addEventListener("mouseup", this.handleMouseUp);
+      },
+      handleMouseMove(e) {
+        this.end_x = e.clientX;
+        this.end_y = e.clientY;
+      },
+      handleMouseUp() {
+        document.body.removeEventListener("mousemove", this.handleMouseMove);
+        document.body.removeEventListener("mouseup", this.handleMouseUp);
+        this.is_show_mask = false;
+        this.handleDomSelect();
+        this.resetXY();
+      },
+      resetXY() {
+        this.start_x = 0;
+        this.start_y = 0;
+        this.end_x = 0;
+        this.end_y = 0;
+      },
+      handleDomSelect() {
+        const dom_mask = window.document.querySelector(".mask");
+        const rect_select = dom_mask.getClientRects()[0];
+
+        let selectKeys = [];
+        document.querySelectorAll(".week-data-td").forEach((node, index) => {
+          const rects = node.getClientRects()[0];
+          if (this.collide(rects, rect_select) === true) {
+            selectKeys.push(index);
+          }
+        });
+        if (selectKeys.length < 2) return;
+        let tableList = _.clone(this.tableData);
+        tableList = _.map(tableList, (item, key) => {
+          return _.map(item, (temp) => {
+            if (selectKeys.indexOf(temp.key) > -1) {
+              temp.checked = true;
+            }
+            return temp;
+          });
+        });
+        this.tableData = tableList;
+      },
+
+      collide(rect1, rect2) {
+        const maxX = Math.max(rect1.x + rect1.width, rect2.x + rect2.width);
+        const maxY = Math.max(rect1.y + rect1.height, rect2.y + rect2.height);
+        const minX = Math.min(rect1.x, rect2.x);
+        const minY = Math.min(rect1.y, rect2.y);
+        if (
+          maxX - minX <= rect1.width + rect2.width &&
+          maxY - minY <= rect1.height + rect2.height
+        ) {
+          return true;
+        } else {
+          return false;
+        }
+      },
+
+      // initMouse() {
+      //   setTimeout(() => {
+      //     const dom_box = document.querySelector("#selectContainer");
+      //     if (dom_box) {
+      //       this.box_screen_left = dom_box.getBoundingClientRect().left;
+      //       this.box_screen_top = dom_box.getBoundingClientRect().top;
+      //     }
+      //   }, 1000);
+      // },
+    },
+    mounted() {
+      this.setTableConfig();
+    }
+  })
+</script>
+
+</html>

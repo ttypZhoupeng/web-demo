@@ -1,0 +1,50 @@
+.grad-table {
+  margin-top: 10px;
+  height: calc(90% - 60px);
+  position: relative;
+  user-select: none;
+
+  .mask {
+    position: absolute;
+    background: #409eff;
+    opacity: 0.4; 
+    z-index: 10000000000000;
+  }
+  table.gridtable {
+    width: 100%;
+    height: 100%;
+    border: 1px solid #eee;
+    td,
+    th {
+      text-align: center;
+    }
+    th {
+      height: 20px;
+      background: #f8f8f9;
+    }
+    .week-first-td {
+      height: 20px;
+      background: #f8f8f9;
+    }
+    .week-data-td {
+      vertical-align: top;
+      font-size: 10px;
+      position: relative;
+      cursor: pointer;
+      .td-data-p {
+        position: absolute;
+        width: 200%;
+        display: block;
+        left: 0;
+        z-index: 10;
+        text-align: center;
+      }
+      .td-data-content {
+        bottom: 0px;
+      }
+    }
+    .white-font {
+      color: rgba(255, 255, 255, 0.8);
+    }
+  }
+}
